@@ -1,8 +1,6 @@
 name: book
 on:
   push:
-    branches:
-      - main
 
 jobs:
   deploy:
