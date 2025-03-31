@@ -1,0 +1,6 @@
+[book]
+authors = ["chaewonkong", "JungWooLee", "hyyej_ji"]
+language = "ko"
+multilingual = false
+src = ""
+title = "Go Deep Dive"
