@@ -52,6 +52,24 @@ ToStr (X), ToString (X) → String (O)
 
 - blank identifier를 이용한 전역 선언을 통해 인터페이스를 체크하는 것은 해당 코드 내에 static conversion이 존재하지 않는 경우에만 한다.
 `var _ json.Marshaler = (*RawMessage)(nil)`
+
+*static conversion 예시*
+```go
+type Sample interface {
+    A()
+}
+
+type impl struct{}
+
+func (i imple) A() {
+    return
+}
+
+func New() Sample {
+    return &impl {}
+}
+```
+
 - error는 error 타입으로 선언하고 사용한다.
 
 # Google Go Style Guide
@@ -179,6 +197,7 @@ func MustParse(version string) *Version {
 
 - goroutine을 생성할 때 언제 종료되는지 명확히 할 것 (누수 방지)
     - 채널 블로킹, 닫힌 채널에 대한 값 전송, 데이터 레이스, goroutine 미종료로 인한 메모리 누수 등을 주의할 것
+    - 간단히 go func(){}()만 사용하는 패턴은 goroutine의 라이프 사이클을 인지하기 어려우므로 주의할 것
 - 좋은 goroutine 이용 팁
     - `context.Context`로 goroutine 수명을 관리하고 종료 신호 전파
     - 종료 여부를 명확히 알리는 신호 채널 사용 (채널 또는 mutex)
@@ -200,7 +219,6 @@ func MustParse(version string) *Version {
 - public API에 generic을 사용할 경우, 충분히 주석을 추가하라.
 
 ### Use %q
-
 문자열을 formatting하는 함수를 사용하면서 내부에 따옴표로 감싸진 문자열을 넣고 싶다면 %q를 사용하라.
 
 ```go
@@ -403,8 +421,10 @@ func (l *ConcreteList) Remove(e Entity) {
     }
     ```
     
-- map이나 slice를 생성할 때 Capacity를 명시하기
+- map이나 slice를 생성할 때 Capacity를 명시하기 
     - 보다 적은 런타임 메모리 할당
+    - capacity가 지정된 변수가 64KB 이하라면 stack에 할당될 가능성이 높고, 이는 불필요한 GC를 줄이는 데 도움이 됨
+    - capacity를 늘릴 때마다 backing array가 새로 복사되는 오버헤드가 발생
 
 ## 코드 스타일
 
