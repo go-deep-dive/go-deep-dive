@@ -198,7 +198,7 @@ func MustParse(version string) *Version {
 - goroutine을 생성할 때 언제 종료되는지 명확히 할 것 (누수 방지)
     - 채널 블로킹, 닫힌 채널에 대한 값 전송, 데이터 레이스, goroutine 미종료로 인한 메모리 누수 등을 주의할 것
     - 간단히 go func(){}()만 사용하는 패턴은 goroutine의 라이프 사이클을 인지하기 어려우므로 주의할 것
-- 좋은 goroutine 이용 팁
+- 좋은 goroutine 이용 팁[^1]
     - `context.Context`로 goroutine 수명을 관리하고 종료 신호 전파
     - 종료 여부를 명확히 알리는 신호 채널 사용 (채널 또는 mutex)
     - `sync.WaitGroup`을 사용하여 goroutine이 종료될 때까지 대기
@@ -559,3 +559,6 @@ golangci.yml을 사용하는 9개 라이브러리들에서 주요 linter의 사�
 - [(Google) Go Style Guide](https://google.github.io/styleguide/go/)
 - [(Uber) Go Style Guide](https://github.com/uber-go/guide/blob/master/style.md)
 - [(뱅크샐러드) Go 코딩 컨벤션](https://blog.banksalad.com/tech/go-best-practice-in-banksalad/)
+
+
+[^1]: [errgroup](https://pkg.go.dev/golang.org/x/sync/errgroup):을 활용할 경우 여러 개의 `func() error`를 goroutine으로 실행하고, 작업이 '하나'라도 실패하는 경우를 체크하는 방식으로 사용할 수 있음. [코드 참고: justErrors](https://pkg.go.dev/golang.org/x/sync/errgroup#example-Group-JustErrors)
