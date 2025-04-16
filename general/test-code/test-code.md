@@ -50,6 +50,17 @@
 
 → 특히, **"코드만 봐서는 이게 왜 이렇게 동작하는지 이해 안 될 때"**, 테스트는 설명서 그 자체가 된다.
 
+사실, 타겟 함수를 실행해볼 수 있다는 것 자체로도 유익한 것 같다.  
+꼭 견고한 테스트 코드가 아니더라도, 아래와 같이 해당 함수만 실행 및 디버깅 할 수 있다는 것 자체가 좋음.
+```
+func A() {
+}
+
+func Test_A(t *testing.T) {
+   A()
+}
+```
+
 ---
 
 ### 📝 정리하자면
@@ -136,7 +147,7 @@ func Test_SendRequest_Success(t *testing.T) { ... }
 ### 💡 이 네이밍이 좋은 이유
 
 - 어떤 함수를 어떤 조건으로 테스트하는지 **한눈에 파악 가능**
-- 테스트 목록에서 필터하거나 찾기 쉬움 (`go test -run ParseBanSource`)
+- 테스트 목록에서 필터하거나 찾기 쉬움 (`go test -run SendRequest`)
 - 팀에서도 **일관된 컨벤션**을 만들 수 있음
 
 ---
@@ -146,33 +157,27 @@ func Test_SendRequest_Success(t *testing.T) { ... }
 ### 🎯 실제 코드
 
 ```go
-func ParseBanSource(input string) []string {
-	var inputLower = strings.ToLower(input)
-	if inputLower == constants.BanSourceManual || input == "" {
-		return []string{constants.BanSourceManual}
+func ParseCategory(input string) []string {
+	inputLower := strings.ToLower(input)
+	switch {
+	case inputLower == "manual" || input == "":
+		return []string{"manual"}
+	case inputLower == "system":
+		return []string{"system"}
+	case strings.HasPrefix(inputLower, "web-"):
+		return []string{"web"}
+	case strings.HasPrefix(inputLower, "api-"):
+		return []string{"api"}
 	}
-	if inputLower == constants.BanSourceNgs {
-		return []string{constants.BanSourceNgs}
-	}
-	if inputLower == constants.BanSourceAD {
-		return []string{constants.BanSourceAD}
-	}
-	if strings.HasPrefix(inputLower, constants.BanSourceACPrefix) {
-		return []string{inputLower}
-	}
-	if strings.HasPrefix(inputLower, constants.BanSourcePSPrefix) {
-		return []string{constants.BanSourcePSETL}
-	}
-	if input == constants.NxLogSystemName {
-		return []string{constants.NxLogSystemName}
-	}
-	input = strings.Replace(input, "'", "\\"", -1)
-	var banSourceArr []string
-	err := json.Unmarshal([]byte(input), &banSourceArr)
+
+	// Try parsing as JSON array of strings
+	input = strings.ReplaceAll(input, "'", "\"")
+	var parsed []string
+	err := json.Unmarshal([]byte(input), &parsed)
 	if err != nil {
-		return []string{constants.NxLogSystemName}
+		return []string{"unknown"}
 	}
-	return banSourceArr
+	return parsed
 }
 ```
 
@@ -186,35 +191,32 @@ func ParseBanSource(input string) []string {
 
 - **외부 I/O 없음** (파일, DB, 네트워크 호출 없음)
 - **상태 변경 없음**
-- 함수에서 사용하는 `constants.XYZ` 값이 **패키지 상수임**
 - → ✔️ 조건 충족
 
 ### 🧪 테스트 코드
 
 ```go
-func Test_ParseBanSource(t *testing.T) {
+func Test_ParseCategory(t *testing.T) {
 	testCases := []struct {
+		name     string
 		input    string
 		expected []string
 	}{
-		{"manual", []string{"manual"}},
-		{"", []string{"manual"}},
-		{"NGS", []string{"ngs"}},
-		{"AD", []string{"ad"}},
-		{"ACC", []string{"acc"}},
-		{"ps-etl", []string{"ps-etl"}},
-		{"nsrrs", []string{"nsrrs"}},
-		{"['recipe1','recipe2']", []string{"recipe1", "recipe2"}},
-		{"[\\"sleepAccount_nxotpuseN\\"]", []string{"sleepAccount_nxotpuseN"}},
-		{"notDefiendBanSource", []string{"nsrrs"}},
-		{"[1024]['test']", []string{"nsrrs"}},
+		{name: "Empty string input", input: "", expected: []string{"manual"}},
+		{name: "Manual input", input: "manual", expected: []string{"manual"}},
+		{name: "System input", input: "system", expected: []string{"system"}},
+		{name: "Web prefix input", input: "web-login", expected: []string{"web"}},
+		{name: "API prefix input", input: "api-user", expected: []string{"api"}},
+		{name: "JSON string array", input: `["cat1", "cat2"]`, expected: []string{"cat1", "cat2"}},
+		{name: "Single item JSON", input: `["onlyone"]`, expected: []string{"onlyone"}},
+		{name: "Invalid JSON fallback", input: `not-a-json`, expected: []string{"unknown"}},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.input, func(t *testing.T) {
-			result := parser.ParseBanSource(tc.input)
+		t.Run(tc.name, func(t *testing.T) {
+			result := parser.ParseCategory(tc.input)
 			if !reflect.DeepEqual(result, tc.expected) {
-				t.Errorf("Input: %s, Expected: %s, Got: %s", tc.input, tc.expected, result)
+				t.Errorf("FAILED - %s\nInput: %s\nExpected: %v\nGot: %v", tc.name, tc.input, tc.expected, result)
 			}
 		})
 	}
@@ -224,6 +226,7 @@ func Test_ParseBanSource(t *testing.T) {
 - 이 함수는 외부 의존성 없이 **입력만으로 결과를 계산하고**,
 - 테스트하기도 쉬우며
 - `table-driven test`에 이상적으로 적합합니다.
+- name 필드를 추가하여서 test case별로 name을 따로 두는 것도 매우 좋은 방법입니다.
 
 ---
 
@@ -275,21 +278,22 @@ type UserService interface {
 }
 
 type UserProcessor struct {
-	svc UserService
+	Svc UserService
 }
 
 func (p *UserProcessor) GetUserName(id int) (string, error) {
-	user, err := p.svc.GetUser(id)
+	user, err := p.Svc.GetUser(id)
 	if err != nil {
 		return "", err
 	}
 	return user.Name, nil
 }
 ```
+> 여기서 GetUserName 을 테스트하고 싶다면?
 
 ### 🧪 테스트 (mockery 활용)
 
-[mockery](https://vektra.github.io/mockery/latest/)
+- 참고: [mockery](https://vektra.github.io/mockery/latest/)
 
 #### **v2**
 
@@ -426,7 +430,7 @@ func TestGetUserName(t *testing.T) {
 	mockSvc := new(mocks.MockUserService)
 	mockSvc.On("GetUser", 42).Return(&User{ID: 42, Name: "Alice"}, nil)
 
-	processor := &UserProcessor{svc: mockSvc}
+	processor := &UserProcessor{Svc: mockSvc}
 	name, err := processor.GetUserName(42)
 
 	assert.NoError(t, err)
@@ -452,6 +456,93 @@ func TestGetUserName(t *testing.T) {
 | **단점** | - 반복 코드 많아짐<br>- 유지보수 불편 | - 설정 필요<br>- 초기 학습 비용 존재 |
 | **추천 상황** | - 인터페이스 수가 적음<br>- 간단한 테스트<br>- 일회성 코드 | - 인터페이스가 많음<br>- 팀 협업 중<br>- TDD/CI 환경에서 사용 |
 
+### Go open source 프로젝트들의 moking 예시
+- uber/zap에서 BufferedWriteSyncer의 테스트
+	```
+	t.Run("flush timer", func(t *testing.T) {
+		buf := &bytes.Buffer{}
+		clock := ztest.NewMockClock()
+		ws := &BufferedWriteSyncer{
+			WS:            AddSync(buf),
+			Size:          6,
+			FlushInterval: time.Microsecond,
+			Clock:         clock,
+		}
+		requireWriteWorks(t, ws)
+		clock.Add(10 * time.Microsecond)
+		assert.Equal(t, "foo", buf.String(), "Unexpected log string")
+
+		// flush twice to validate loop logic
+		requireWriteWorks(t, ws)
+		clock.Add(10 * time.Microsecond)
+		assert.Equal(t, "foofoo", buf.String(), "Unexpected log string")
+		assert.NoError(t, ws.Stop())
+	})
+	```
+- kubernetes/kubernetes mutaing_webhook_manager의 테스트
+	```
+	// mockCreateMutatingWebhookAccessor is a struct used to compute how many times
+	// the function webhook.NewMutatingWebhookAccessor is being called when refreshing
+	// webhookAccessors.
+	//
+	// NOTE: Maybe there some testing help that we can import and reuse instead.
+	type mockCreateMutatingWebhookAccessor struct {
+		numberOfCalls int
+	}
+	// 이하 구현 생략
+
+	func TestGetMutatingWebhookConfigSmartReload(t *testing.T) {
+	// 생략
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := fake.NewSimpleClientset()
+			informerFactory := informers.NewSharedInformerFactory(client, 0)
+			stop := make(chan struct{})
+			defer close(stop)
+			manager := NewMutatingWebhookConfigurationManager(informerFactory)
+			managerStructPtr := manager.(*mutatingWebhookConfigurationManager)
+			fakeWebhookAccessorCreator := &mockCreateMutatingWebhookAccessor{}
+			managerStructPtr.createMutatingWebhookAccessor = fakeWebhookAccessorCreator.fn
+			informerFactory.Start(stop)
+			informerFactory.WaitForCacheSync(stop)
+		// 생략
+		}
+	}
+	```
+- prometheus/prometheus mockServer
+	```
+	func mockServer(code int, body string) (*httptest.Server, func() *http.Request) {
+		var req *http.Request
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.ParseForm()
+			req = r
+			w.WriteHeader(code)
+			fmt.Fprintln(w, body)
+		}))
+
+		f := func() *http.Request {
+			return req
+		}
+		return server, f
+	}
+
+	func TestQueryInstant(t *testing.T) {
+		t.Parallel()
+		s, getRequest := mockServer(200, `{"status": "success", "data": {"resultType": "vector", "result": []}}`)
+		defer s.Close()
+
+		urlObject, err := url.Parse(s.URL)
+		require.NoError(t, err)
+
+		p := &promqlPrinter{}
+		exitCode := QueryInstant(urlObject, http.DefaultTransport, "up", "300", p)
+		require.Equal(t, "/api/v1/query", getRequest().URL.Path)
+		form := getRequest().Form
+		require.Equal(t, "up", form.Get("query"))
+		require.Equal(t, "300", form.Get("time"))
+		require.Equal(t, 0, exitCode)
+	}
+	```
 ---
 
 ### 🧠 실전 기준
@@ -655,7 +746,7 @@ func TestHandler_Do(t *testing.T) {
 		defer ts.Close()
 
 		t.Run(tt.name, func(t *testing.T) {
-		  // 의존성
+		  	// 의존성
 			output := &bytes.Buffer{}
 			writer := io.MultiWriter(os.Stdout, output)
 			logger := zerolog.New(writer).With().Timestamp().Logger()
@@ -710,6 +801,9 @@ func TestHandler_Do(t *testing.T) {
 - 내부 로직을 테스트하려고 export 하거나 구조를 변경하지 않음
 - **진짜 API 요청처럼 흉내내는 흐름 기반 테스트**
 - 외부 API를 호출하는 많은 코드에서 추천되는 전략
+- **다만, 현재 execute의 내부 구현과 httptest mockServer의 구현이 따로 놀고 있기 때문에 이 부분 문제의 소지가 있음**
+  - execute 내부 구현이 변경되면 테스트 케이스도 바껴야 함
+  - 결과적으로 내부 구현이 변경되면 테스트 케이스가 깨질 것이기에 이 부분에 대해 인지가 가능하다는 점에서 문제가 없지 않을까?
 
 ---
 
