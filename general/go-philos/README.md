@@ -1,5 +1,133 @@
 # Go 언어에서 배운 것들
 
+## 언어 디자인의 원칙
+
+### 일반 원칙
+
+> When Go was designed, Java and C++ were the most commonly used languages for writing servers, at least at Google. We felt that these languages required too much bookkeeping and repetition. Some programmers reacted by moving towards more dynamic, fluid languages like Python, at the cost of efficiency and type safety. We felt it should be possible to have the efficiency, the safety, and the fluidity in a single language.  
+Go attempts to reduce the amount of typing in both senses of the word. Throughout its design, we have tried to reduce clutter and complexity. There are no forward declarations and no header files; everything is declared exactly once. Initialization is expressive, automatic, and easy to use. Syntax is clean and light on keywords. Repetition (foo.Foo* myFoo = new(foo.Foo)) is reduced by simple type derivation using the := declare-and-initialize construct. And perhaps most radically, there is no type hierarchy: types just are, they don’t have to announce their relationships. These simplifications allow Go to be expressive yet comprehensible without sacrificing productivity.  
+Another important principle is to keep the concepts orthogonal. Methods can be implemented for any type; structures represent data while interfaces represent abstraction; and so on. Orthogonality makes it easier to understand what happens when things combine.
+
+Go를 디자인할 때, Java와 C++가 서버를 작성할 때 가장 많이 사용되는 언어였다. 적어도 구글에서는 말이다. 우리는 이 언어는 bookkeeping(부기)와 반복이 너무 많이 필요하다고 느꼈다. 이에 대해 일부 프로그래머는 효율성과 타입 안정성을 포기하며 동적이고 유동적인 파이썬 같은 언어로 옮겨가는 식으로 대응했다. 우리는 한 언어가 효율성, 안정성, 유동성을 모두 겸비할 수 있으면 했다.
+
+Go는 이 모두를 위해 타이핑의 양을 줄이려고 시도한다. Go의 디자인 내내 복잡함과 불필요한 코드를 덜어내려 애썼다. forward declaration을 없애려 했고 헤더 파일도 없다. 모든 것은 한 번에 선언된다. 초기화는 표현이 풍부하고 자동적이며 사용하기 쉽다. 문법은 깔끔하고 언어의 키워드가 가볍다. `(foo.Foo* myFoo = new(foo.Foo))`같은 반복은 `:=` 의 사용으로 단순하게 하려 했다. 가장 급진적으로는, 타입 위계가 없다. 그 본인일 뿐이며, 관계를 표현하지 않아도 된다. 이 단순함이 Go가 표현이 풍부하면서도 이해가 쉽고 생산성을 높일 수 있게 한다.
+
+다른 중요한 원칙은 개념이 직교(orthogonal)하도록 한 것이야. 메소드는 어떤 타입을 위해서든 구현 가능하고, 구조체는 데이터를 표현하고 인터페이스는 추상성을 표현하는 등. Orthogonality가 이 개념들이 결합할 때 무슨 일이 일어날지 예측 가능하게 한다. 
+
+* forward declarations : 함수가 쓸 다른 함수의 선언이 반드시 사용 함수 위에 있어야 하는 것 
+
+
+### Go 언어에서 exception이 없는 이유
+
+Exception을 try - catch - finally와 같은 제어 구조체에 결합하는 건 코드를 난해하게 만든다고 믿는다. 이는 또한 프로그래머가 파일이 안 열리는 경우가 같이 흔히 발생할 수 있는 에러를 예외적이라고 규정하게 한다고 생각한다.
+
+Go는 다른 접근법을 취한다. 일반 에러 핸들링은 Go의 multi-value 반화는 리턴값을 overload하지 않으며 에러를 report할 수 있게 한다. Go의 다른 기능과 결합된 일반적인 형태(canonical)의 error 타입이 있어 에러 핸들링을ㅡ즐겁게 하면서도 다른 언어와 다르게 한다.
+
+Go는 동시에 프로그램에 크리티컬한 예외 상황을 signal하고 recover하는 built-in 기능도 있다. recovery 메카니즘은 함수의 상태가 에러로 무너지는 일부분으로 실행된다. 이는 재해에 가까운 예외를 다루기 충분하면서도 별도의 control structure가 필요없으며, 잘 쓰이면 깔끔한 에러 핸들링 코드를 작성하는 데 도움이 된다. 
+
+#### Go의 에러에 대해
+
+**go는 내장된 interface**
+
+```go
+type error interface {
+    Error() string
+}
+```
+error는 인터페이스 타입이며, `Error()`를 구현한 모든 것은 error가 된다. error 타입은 built-in이며, `universe block`에 `predeclared`되어 있다.
+
+
+#### 반복적인 에러 핸들링을 단순화하기~
+
+go 언어에서 에러 핸들링은 중요하다. 언어 디자인과 컨벤션이 명시적으로 에러를 체크하도록 장려한다. 몇몇 경우 이 패턴이 Go 코드를 verbose하게 하는데, 다행히도 이를 최소화할 몇몇 기법이 있다.
+
+```go
+func init() {
+    http.HandleFunc("/view", viewRecord)
+}
+
+func viewRecord(w http.ResponseWriter, r *http.Request) {
+    // appengine: DB에서 record를 query해 template로 포매팅
+    c := appengine.NewContext(r)
+    key := datastore.NewKey(c, "Record", r.FormValue("id"), 0, nil)
+    record := new(Record)
+    if err := datastore.Get(c, key, record); err != nil {
+        http.Error(w, err.Error(), 500)
+        return
+    }
+    if err := viewTemplate.Execute(w, record); err != nil {
+        http.Error(w, err.Error(), 500)
+    }
+}
+```
+
+이런 식으로 error catch가 늘어날 수 있다. 이 정도는 양반으로 계속계속 늘어나며 copy paste의 지옥을 볼 수도 있다.
+
+```go
+type appError struct {
+    Error   error
+    Message string
+    Code    int
+}
+type appHandler func(http.ResponseWriter, *http.Request) *appError
+
+func viewRecord(w http.ResponseWriter, r *http.Request) *appError {
+    c := appengine.NewContext(r)
+    key := datastore.NewKey(c, "Record", r.FormValue("id"), 0, nil)
+    record := new(Record)
+    if err := datastore.Get(c, key, record); err != nil {
+        return &appError{err, "Record not found", 404}
+    }
+    if err := viewTemplate.Execute(w, record); err != nil {
+        return &appError{err, "Can't display record", 500}
+    }
+    return nil
+}
+
+func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+    if e := fn(w, r); e != nil { // e is *appError, not os.Error.
+        c := appengine.NewContext(r)
+        c.Errorf("%v", e.Error)
+        http.Error(w, e.Message, e.Code)
+    }
+}
+
+
+func init() {
+    http.Handle("/view", appHandler(viewRecord))
+}
+```
+
+### 왜 타입 상속이 없을까요?
+
+객체 지향 프로그래밍은 적어도 패러다임 중에 가장 잘 알려져있지만 타입간 관계에 대한 너무 많은 토론이 필요하며 관계가 자동적으로 생겨나기도 한다. Go는 다른 접근을 취했다.
+
+두 타입이 관련 있음을 미리 선언하도록 요구하는 대신, Go에서 타입은 인터페이스의 메소드를 만족하기만 하면 된다. 불필요한 부기를 줄일 뿐 아니라, 추가적인 장점이 더 있다. 타입은 여러 인터페이스를 동시에 만족할 수 있어 기존의 복잡한 다중 상속의 복잡함을 피할 수 있다. 인터페이스는 매우 가벼울 수 있으며, 메소드가 없거나 하나뿐인 인터페이스가 개념을 표현하는 데 유용하다. 인터페이스는 구현 이후 새 아이디어가 도출됐거나 테스트를 위해 추가될 수도 있다. 타입과 인터페이스간 명시적인 관계가 없기 때문에 관리하거나 논쟁할 위계가 없다.
+
+
+### Go가 암묵적인 숫자 형변환을 지원하지 않는 이유
+
+C의 숫자간 자동 형변환의 이점보다 이로 인해 발생하는 혼란이 더 크다. unassigned인지 어떻게 알지? 오버플로가 발생하나? 결과값이 아키텍쳐에 독립적인가, 유동적인가... 또한 이는 컴파일러 개발을 어렵게 하며 아키텍쳐마다 일관되지 않는다. 
+
+코드의 이식성을 보장하기 위해 몇몇 상황에서 명확한 형변환일지라도 반드시 일관되게 형 변환을 강제했다. 물론 Go의 상수가 이 문제를 좀 개선하기는 한다.
+
+
+### maps, slices, channel은 reference인데 array는 왜 Values죠?
+
+긴 이야기가 있지... 개발 당시 maps, channel는 문법적으로 pointer로 계획되었고 비 포인터 객체를 선언하고 쓸 수 없었어. array도 많이 고민했는데. 결국 우리는 pointer, values의 엄격한 분리가 언어를 사용하기 어렵게 만든다고 생각했어. 이 타입을 연결된 공유된 자료구조에 대한 referecene(descriptor)로서 동작하게 해서 이 이슈를 풀었어. 물론 이 변화가 언어의 슬픈 복잡함을 추가했지만, 사용성과 생산성은 크게 향상되었다고 생각해. 
+
+* pointer: 변수의 메모리 주소
+* reference: 내부 맵, 슬라이드 등의 데이터에 대한 포인터 등을 포함하는 descriptor (메타데이터)
+
+
+### 참고
+
+* https://go.dev/doc/faq#principles
+* https://go.dev/blog/error-handling-and-go
+
+
+---
+
 ## 메모리 정렬
 
 ### 메모리 정렬이란
