@@ -61,7 +61,7 @@ type Sample interface {
 
 type impl struct{}
 
-func (i imple) A() {
+func (i impl) A() {
     return
 }
 
@@ -83,7 +83,7 @@ func New() Sample {
 - 줄의 길이기 길다고 나누지 말 것.
     - 길다고 느껴지면 리팩토링을 할 것
     - 함수 선언이나 if/for문 등 자연스레 바뀌는 경우가 아니면 줄을 바꾸지 않음
-    - 긴 문자열이라면 쪼개서 여러개의 작은 문자열로 사용할 것
+    - 긴 문자열이라면 쪼개서 여러 개의 작은 문자열로 사용할 것
 
 ### Least mechanism
 
@@ -142,10 +142,10 @@ url (O) URL (O) Url (X)
     - numUsers (X) → userCount (O)
     - userSlice(X) → users(O)
     - 단 ageString과 age가 동시에 존재하는 경우 ageString 형태로 변수명 사용하는 것도 가능
-- 한글자 변수는 의미가 불명확하므로 지양하되, 반복적으로 사용되거나 일반적으로 사용되는 케이스 등에서만 제한적으로 사용할 것
-    - method의 receiver variable의 경우 한글자로 선언 가능
+- 한 글자 변수는 의미가 불명확하므로 지양하되, 반복적으로 사용되거나 일반적으로 사용되는 케이스 등에서만 제한적으로 사용할 것
+    - method의 receiver variable의 경우 한 글자로 선언 가능
     - io.Reader나 http.Request를 r로 쓰는 것은 일반적으로 사용되는 형태이므로 가능
-    - for 문 처럼 스코프가 작은 경우, loop identifier는 단일글자 가능
+    - for 문처럼 스코프가 작은 경우, loop identifier는 단일 글자 가능
     - i, j, x, y도 가능
 
 ### Doc comments
@@ -175,7 +175,7 @@ type Options struct {
 ### Don’t panic
 
 - 보통의 에러 핸들링 상황에서 panic을 쓰지 말 것
-- main 패키지의 initialization 코드 등에서 프로그램을 종료해야 하는 경우 stack trace가 그닥 도움이 되지 않으므로 `log.Exit`을 쓰는 것을 고려할 것
+- main 패키지의 initialization 코드 등에서 프로그램을 종료해야 하는 경우 stack trace가 그다지 도움이 되지 않으므로 `log.Exit`을 쓰는 것을 고려할 것
 - 불가능한 조건, 코드리뷰나 테스팅 과정에서 반드시 잡혀야 할 버그 등의 케이스에 대해서는 `log.Fatal`을 쓸 수 있다.
 
 ### Must functions
@@ -341,14 +341,14 @@ return p.count
 ### Channel Size
 
 - 채널 사이즈는 설정이 필요하다면 1로, 아니면 설정하지 않고 unbuffered로 사용하라
-    - 만약 채널 사이즈를 두고 사용해야한다면 충분히 검토하라
-- 전역변수로 에러 변수를 생성할때는 “Err” 또는 “err”를 prefix로 붙인다.
+    - 만약 채널 사이즈를 두고 사용해야 한다면 충분히 검토하라
+- 전역변수로 에러 변수를 생성할 때는 “Err” 또는 “err”를 prefix로 붙인다.
 
 ### Errors
 
 - 에러 매칭이 필요한 경우 (사용측에서 에러에 따라 처리해야 하는 경우) top-level error variable을 두거나 custom type을 두어 해결할 수 있다.
 
-### 변경 가능한전역변수
+### 변경 가능한 전역변수
 
 - Mutable한 전역변수 대신 Dependency Injection을 고려하라
 (구조체가 값을 들고 있음)
@@ -385,16 +385,16 @@ func (l *ConcreteList) Remove(e Entity) {
 ### os.Exit
 
 - os.Exit과 log.Fatal은 main 함수에서만 사용하라.
-    - main함수가 아닌 곳에서 Exit, Fatal로 앱을 종료할 경우, control flow가 명확하지 않아진다.
+    - main 함수가 아닌 곳에서 Exit, Fatal로 앱을 종료할 경우, control flow가 명확하지 않아진다.
     - 어떤 함수가 Exit, Fatal로 종료될 경우 테스트가 어려워진다.
-    - Exit, Fatal 사용시, defer로 추가된 clean up 함수들이 실행되지 않고 스킵된다.
+    - Exit, Fatal 사용 시, defer로 추가된 clean up 함수들이 실행되지 않고 스킵된다.
 - 다른 함수에서 사용해야할 경우에는 error를 리턴하고 메인 함수에서 처리하라.
 
 ### Exit Once
 
-- main함수 안에서 여러 차례 os.Exit, log.Fatal을 호출하지 말라. 최대 1번만 호출하라.
-    - 만약 Exit을 해야할 여러 케이스가 있다면 이를 하나의 run 함수로 묶고 에러를 반환하게 하라. main함수는 이 함수를 실행해 에러가 반환되면 Exit을 하게 하라.
-    - 이렇게 하면 main함수에서 분리된 함수는 테스트 가능해지며, main함수에는 최소한의 로직만 남길 수 있다.
+- main 함수 안에서 여러 차례 os.Exit, log.Fatal을 호출하지 말라. 최대 1번만 호출하라.
+    - 만약 Exit을 해야할 여러 케이스가 있다면 이를 하나의 run 함수로 묶고 에러를 반환하게 하라. main 함수는 이 함수를 실행해 에러가 반환되면 Exit을 하게 하라.
+    - 이렇게 하면 main 함수에서 분리된 함수는 테스트 가능해지며, main 함수에는 최소한의 로직만 남길 수 있다.
 
 ### Goroutine을 fire-and-forget 방식으로 사용하지 말기
 
@@ -404,7 +404,7 @@ func (l *ConcreteList) Remove(e Entity) {
 
 ## 성능
 
-- fmt보다 strconv로  형변환 하기
+- fmt보다 strconv로 형변환 하기
     - 메모리 할당도 적고 성능도 좋음
 - 반복적인 string-to-byte 변환 지양
     
@@ -437,7 +437,7 @@ func (l *ConcreteList) Remove(e Entity) {
 
 ### 함수 순서
 
-- export 되는 함수가 private 함수보다 위에 존재해야 한다.
+- export되는 함수가 private 함수보다 위에 존재해야 한다.
 - 생성자 함수는 생성하는 타입 선언 바로 밑에 위치해야 한다.
 
 ### export되지 않는 전역변수
@@ -481,7 +481,7 @@ golangci-lint를 이용하면 팀에서 원하는 style convention을 어느 정
 
 [Introduction | golangci-lint](https://golangci-lint.run/)
 
-예를 들어,  export되는 함수들에는 반드시 주석이 있어야 한다는 룰을 적용하고 싶다면, 아래처럼 적용하면 된다.
+예를 들어, export되는 함수들에는 반드시 주석이 있어야 한다는 룰을 적용하고 싶다면, 아래처럼 적용하면 된다.
 
 ```yaml
 linters:
@@ -490,7 +490,7 @@ linters:
   settings:
     revive:
       rules:
-         - name: exported
+        - name: exported
           severity: warning
           disabled: false
           exclude: [""]
@@ -500,9 +500,9 @@ linters:
 
 그 밖에도 주요 style guide들에서 명시하는 패턴/안티패턴을 규제하는 linter들이 많으므로 쭉 읽어보고 사용할 만한 linter를 추가해 사용하면 좋다.
 
-여러 linter들이 제공되는 데, 니즈에 맞는 linter를 잘 설정 한다면 꽤나 디테일한 적용도 가능하다.
+여러 linter들이 제공되는데, 니즈에 맞는 linter를 잘 설정한다면 꽤나 디테일한 적용도 가능하다.
 
-예를 들면 아래처럼 regex 패턴기반으로 log.Print 를 사용금지할 수도 있다.
+예를 들면 아래처럼 regex 패턴기반으로 log.Print를 사용 금지할 수도 있다.
 
 ```yaml
 linters:
@@ -543,7 +543,7 @@ golangci.yml을 사용하는 9개 라이브러리들에서 주요 linter의 사�
 | 린터 | 사용한 라이브러리 수 | 목적 |
 | --- | --- | --- |
 | misspell | 6 | 자주 스펠링 틀리는 영어 단어 체크 |
-| goimports | 5 | imort 추가/미사용 제거 |
+| goimports | 5 | import 추가/미사용 제거 |
 | nolintlint | 5 | 잘못 작성된 nolint 선언 체크 |
 | revive | 5 | golint 대체제 |
 | unconvert | 5 | 불필요한 type conversion 제거 |
@@ -561,4 +561,4 @@ golangci.yml을 사용하는 9개 라이브러리들에서 주요 linter의 사�
 - [(뱅크샐러드) Go 코딩 컨벤션](https://blog.banksalad.com/tech/go-best-practice-in-banksalad/)
 
 
-[^1]: [errgroup](https://pkg.go.dev/golang.org/x/sync/errgroup):을 활용할 경우 여러 개의 `func() error`를 goroutine으로 실행하고, 작업이 '하나'라도 실패하는 경우를 체크하는 방식으로 사용할 수 있음. [코드 참고: justErrors](https://pkg.go.dev/golang.org/x/sync/errgroup#example-Group-JustErrors)
+[^1]: [errgroup](https://pkg.go.dev/golang.org/x/sync/errgroup)을 활용할 경우 여러 개의 `func() error`를 goroutine으로 실행하고, 작업이 '하나'라도 실패하는 경우를 체크하는 방식으로 사용할 수 있음. [코드 참고: justErrors](https://pkg.go.dev/golang.org/x/sync/errgroup#example-Group-JustErrors)
