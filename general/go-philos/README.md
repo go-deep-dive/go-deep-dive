@@ -117,13 +117,32 @@ C의 숫자간 자동 형변환의 이점보다 이로 인해 발생하는 혼�
 긴 이야기가 있지... 개발 당시 maps, channel는 문법적으로 pointer로 계획되었고 비 포인터 객체를 선언하고 쓸 수 없었어. array도 많이 고민했는데. 결국 우리는 pointer, values의 엄격한 분리가 언어를 사용하기 어렵게 만든다고 생각했어. 이 타입을 연결된 공유된 자료구조에 대한 referecene(descriptor)로서 동작하게 해서 이 이슈를 풀었어. 물론 이 변화가 언어의 슬픈 복잡함을 추가했지만, 사용성과 생산성은 크게 향상되었다고 생각해. 
 
 * pointer: 변수의 메모리 주소
-* reference: 내부 맵, 슬라이드 등의 데이터에 대한 포인터 등을 포함하는 descriptor (메타데이터)
+* reference: 내부 맵, 슬라이드 등의 데이터에 대한 포인터 등을 포함하는 descriptor (메타데이터). 포인터처럼 `&`, `*`를 쓰지 않아도 된다.
+
+#### golang의 runtime 메모리 관리
+
+POSIX의 프로세스 메모리 자료구조는 일반적으로 다음과 같다:
+![sdf](classical.webp)
+
+* 상수, 코드: 코드 및 상수, static 값 저장 공간. 보통 작고 컴파일 시 결정
+* heap: 런타임 시에 크기가 유동적으로 조절되고, 포인터, 배열 및 그외 자료구조 저장 공간. 메모리 소모량이 큰 값은 heap에서 관리
+* stack: stack frame으로 구성되며 함수가 호출될 때마다 stack에 push됨. 함수가 종료할 때 stack pop
+  - **스택이 하나임은 오직 하나의 실행 상태만을 가정하고 있음. 이는 멀티스레딩에는 적합하지 않음 -> 각 스레드에 로컬 변수가 많을 수 있다. 다시 말해 기술적으로 스레드의 개수가 제한될 수 있다.**
+
+이때 기존 프로세스 모델은 stack이 8MB 정도로 작음. 이는 멀티스레드나 재귀 등을 통해 함수를 매우 많이 실행해야 할 때 stack overlfow가 발생할 수 있음. 즉, stack size도 동적이어야 한다. 
+
+golang의 언어적 메모리 모델
+
+![asdf](go-style-memory.webp)
+
+* **goroutine 하나마다 하나의 스택**
+* heap에서 메모리를 대여하여 stack의 크기를 동적으로 변경할 수 있음. 이를 통해 수만개의 goroutine을 실행 가능케한다.
 
 
 ### 참고
-
 * https://go.dev/doc/faq#principles
 * https://go.dev/blog/error-handling-and-go
+* https://medium.com/@edwardpie/understanding-the-memory-model-of-golang-part-2-972fe74372ba
 
 
 ---
