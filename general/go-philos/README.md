@@ -68,6 +68,52 @@ Go는 다른 접근법을 취한다. 일반 에러 핸들링은 Go의 multi-valu
 
 Go는 동시에 프로그램에 크리티컬한 예외 상황을 signal하고 recover하는 built-in 기능도 있다. recovery 메카니즘은 함수의 상태가 에러로 무너지는 일부분으로 실행된다. 이는 재해에 가까운 예외를 다루기 충분하면서도 별도의 control structure가 필요없으며, 잘 쓰이면 깔끔한 에러 핸들링 코드를 작성하는 데 도움이 된다. 
 
+#### 다른 언어와 차이
+
+python 등 주요 언어와 달리 try - catch 구문이 없다. 이때의 특징 (thx. GPT)
+
+| 특징 | Go의 에러 처리 (명시적 반환) | 예외 처리 (try/catch) |
+|---|---|---|
+| 에러 처리 흐름 | 명시적으로 error 반환 후, 호출자에서 처리 | 예외 발생 시 자동으로 흐름 변경 |
+| 장점 | 에러가 숨겨지지 않음, 성능 효율적, 제어 흐름 명확(다른 곳으로 튀어가지 않음) | 코드 간결함, 에러 처리 코드 분리 |
+| 단점 | 에러 처리 코드 반복, 에러 타입이 단순(에러 타입 시 코드가 복잡해짐. 관련 syntatic sugar가 없음), 일관성 부족 | 예외가 숨겨질 수 있음, 성능 오버헤드 |
+| 에러 타입 | 단순한 값 (error 인터페이스) | 예외 객체 (다양한 속성 제공) |
+| 제어 흐름 | 명시적, 코드 흐름 내에서 처리 | 예외 발생 시 흐름이 자동 변경 |
+
+```go
+// 예외 구분이 까다로움
+package main
+
+import (
+	"fmt"
+)
+
+type NotFoundError struct {
+	Message string
+}
+
+func (e *NotFoundError) Error() string {
+	return e.Message
+}
+
+func doSomething() error {
+	return &NotFoundError{Message: "Resource not found"}
+}
+
+func main() {
+	err := doSomething()
+	if err != nil {
+		if nfe, ok := err.(*NotFoundError); ok {
+			// NotFoundError 타입이면
+			fmt.Println("Not Found Error:", nfe.Message)
+		} else {
+			// 다른 타입의 에러 처리
+			fmt.Println("Unknown error:", err)
+		}
+	}
+}
+```
+
 #### Go의 에러에 대해
 
 **go는 내장된 interface**
