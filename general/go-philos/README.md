@@ -60,7 +60,6 @@ function foo() {
 
 
 
-
 ### Go 언어에서 exception이 없는 이유
 
 Exception을 try - catch - finally와 같은 제어 구조체(control structure)에 결합하는 건 코드를 난해하게 만든다고 믿는다. 이는 또한 프로그래머가 파일이 안 열리는 경우가 같이 흔히 발생할 수 있는 에러를 예외적이라고 규정하게 한다고 생각한다.
@@ -147,6 +146,90 @@ func init() {
 객체 지향 프로그래밍은 적어도 패러다임 중에 가장 잘 알려져있지만 타입간 관계에 대한 너무 많은 토론이 필요하며 관계가 자동적으로 생겨나기도 한다. Go는 다른 접근을 취했다.
 
 두 타입이 관련 있음을 미리 선언하도록 요구하는 대신, Go에서 타입은 인터페이스의 메소드를 만족하기만 하면 된다. 불필요한 부기를 줄일 뿐 아니라, 추가적인 장점이 더 있다. 타입은 여러 인터페이스를 동시에 만족할 수 있어 기존의 복잡한 다중 상속의 복잡함을 피할 수 있다. **인터페이스는 매우 가벼울 수 있으며, 메소드가 없거나 하나뿐인 인터페이스가 개념을 표현하는 데 유용하다. 인터페이스는 구현 이후 새 아이디어가 도출됐거나 테스트를 위해 추가될 수도 있다.** 타입과 인터페이스간 명시적인 관계가 없기 때문에 관리하거나 논쟁할 위계가 없다.
+
+#### interface의 typing
+
+> typing: "typing"이라고 정의된 "데이터 타입 할당"은 일련의 비트를 메모리 안의 값 또는 어떤 객체를 변수로 만드는 의미가 있다.
+>
+> https://en.wikipedia.org/wiki/Type_system
+
+go에서의 인터페이스는 duck typing 방식으로 동작한다. 즉, 요구되는 메소드 집합만 구현하면 인터페이스로 인식한다.  
+
+```go
+type Animal interface {
+    Bark()
+}
+
+type Pig struct {}
+
+func (p Pig) Bark() {
+    fmt.Println("꿀꿀, 꿀벌")
+}
+
+type Dog struct {}
+
+func (d Dog) Bark() {
+    fmt.Println("멍멍, 멍들었어")
+}
+
+p := Pig{}
+d := Dog{}
+
+p.Bark()
+d.Bark()
+
+꿀꿀, 꿀벌
+멍멍, 멍들었어
+```
+
+그런데 보다 구체적으로 structural typing이라고도 한다.
+
+* duck typing: "같은 행동을 하면 같은 타입으로 간주한다". **런타임 시 인터페이스 판단**
+  - python, ruby, etc
+
+```python
+import random
+
+
+def quack(o):
+    print(o.quack())
+
+
+dumb_duck = bool(random.randint(0, 2))
+if dumb_duck:
+    class Duck:
+        pass
+else:
+    class Duck:
+        def quack(self):
+            print("I can speak!")
+
+d = Duck()
+d.quack()  # 런타임 시에 결정됩니다
+```
+
+* structural typing: "구조가 같으면 같은 타입으로 간주한다". **컴파일 시 인터페이스 판단**. 
+  - go, typescript
+
+```go
+type Quacker interface {
+	Quack()
+}
+
+type Duck struct{}
+
+func (d Duck) Quack() {
+	fmt.Println("Quack!")
+}
+
+func makeQuack(q Quacker) {
+	q.Quack()
+}
+
+func main() {
+	makeQuack(Duck{}) // 컴파일 타임에 Duck이 Quacker 인터페이스를 만족함을 확인
+}
+```
 
 
 ### Go가 암묵적인 숫자 형변환을 지원하지 않는 이유
