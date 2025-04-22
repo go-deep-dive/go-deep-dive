@@ -6,11 +6,59 @@
 
 Go를 디자인할 때, 적어도 구글에서는 Java와 C++가 서버를 작성할 때 가장 많이 사용되는 언어였다. 우리는 이 언어는 bookkeeping(부기)와 반복이 너무 많이 필요하다고 느꼈다. 이에 대해 일부 프로그래머는 효율성과 타입 안정성을 포기하며 동적이고 유동적인 파이썬 같은 언어로 옮겨가는 식으로 대응했다. **우리는 한 언어가 효율성, 안정성, 유동성을 모두 겸비할 수 있으면 했다.**
 
-Go는 이 모두를 위해 타이핑의 양을 줄이려고 시도한다. Go의 디자인 내내 복잡함과 불필요한 코드를 덜어내려 애썼다. forward declaration을 없애려 했고 헤더 파일도 없다. 모든 것은 한 번에 선언된다. 초기화는 표현이 풍부하고 자동적이며 사용하기 쉽다. 문법은 깔끔하고 언어의 키워드가 가볍다. `(foo.Foo* myFoo = new(foo.Foo))`같은 반복은 `:=` 의 사용으로 단순하게 하려 했다. 가장 급진적으로는, 타입 위계가 없다. 그 본인일 뿐이며, 관계를 표현하지 않아도 된다. 이 단순함이 Go가 표현이 풍부하면서도 이해가 쉽고 생산성을 높일 수 있게 한다.
+Go는 이 모두를 위해 타이핑의 양을 줄이려고 시도한다. Go의 디자인 내내 복잡함과 불필요한 코드를 덜어내려 애썼다. forward declaration(전방 선언)을 없애려 했고 헤더 파일도 없다. 모든 것은 한 번에 선언된다. 초기화는 표현이 풍부하고 자동적이며 사용하기 쉽다. 문법은 깔끔하고 언어의 키워드가 가볍다. `(foo.Foo* myFoo = new(foo.Foo))`같은 반복은 `:=` 의 사용으로 단순하게 하려 했다. 가장 급진적으로는, 타입 위계가 없다. 그 본인일 뿐이며, 관계를 표현하지 않아도 된다. 이 단순함이 Go가 표현이 풍부하면서도 이해가 쉽고 생산성을 높일 수 있게 한다.
 
 다른 중요한 원칙은 **개념이 직교(orthogonal)하도록 했다. 메소드는 어떤 타입을 위해서든 구현 가능하고, 구조체는 데이터를 표현하고 인터페이스는 추상성을 표현하는 등 각각은 구분되며 영향 받거나 종속되지 않는다. Orthogonality가 이 개념들이 결합할 때 무슨 일이 일어날지 예측 가능하게 한다.**
 
 * forward declarations : 함수가 쓸 다른 함수의 선언이 반드시 사용 함수 위에 있어야 하는 것 
+
+* 전방 선언이 없는 언어
+```python
+def hi():
+    print("Hello babe")
+    bye()
+
+def bye():
+    print("Bye, babe. Call me later")
+
+hi()
+
+Hello babe
+Bye, babe. Call me later
+```
+
+* 전방 선언 언어: C, C++
+```cpp
+#include <iostream>
+
+// forward declaration
+void sayHello();  // 선언이 명시적으로 필요함
+
+int main() {
+    sayHello();
+}
+
+void sayHello() {
+    std::cout << "Hello!" << std::endl;
+}
+```
+
+* 기타: javascript hoisting
+  - 변수(`var`)나 함수 선언이 해당 스코프의 최상단으로 끌어올려지는 현상
+
+```javascript
+foo();
+
+// 런타임 시에 함수 정의가 최상단으로 끌어올라감
+function foo() {
+  console.log("I am foo");
+}
+```
+* forward declaration과의 차이
+  * forward declaration: 컴파일 시 체크, 수동 적용
+  * hoisting: 런타임 시 자동으로 적용
+
+
 
 
 ### Go 언어에서 exception이 없는 이유
@@ -112,7 +160,53 @@ C의 숫자간 자동 형변환의 이점보다 이로 인해 발생하는 혼�
 긴 이야기가 있지... 개발 당시 maps, channel는 문법적으로 pointer로 계획되었고 비 포인터 객체를 선언하고 쓸 수 없었어. array도 많이 고민했는데. 결국 우리는 pointer, values의 엄격한 분리가 언어를 사용하기 어렵게 만든다고 생각했어. 이 타입을 연결된 공유된 자료구조에 대한 referecene(descriptor)로서 동작하게 해서 이 이슈를 풀었어. 물론 이 변화가 언어의 슬픈 복잡함을 추가했지만, 사용성과 생산성은 크게 향상되었다고 생각해. 
 
 * pointer: 변수의 메모리 주소
-* reference: 내부 맵, 슬라이드 등의 데이터에 대한 포인터 등을 포함하는 descriptor (메타데이터). 포인터처럼 `&`, `*`를 쓰지 않아도 된다.
+* reference: 맵, 채널, 슬라이드, 포인터. 메모리 주소를 참조하는 descriptor (메타데이터). 포인터처럼 `&`, `*`를 쓰지 않아도 된다.
+  - 그외에는 전부 value types이다.
+
+```go
+// reference types
+
+nameScore := map[string]int{"apple": 3}
+nameScoreChild := nameScore
+nameScoreChild["apple"] = 100
+fmt.Println(nameScore)
+// map[apple:100]
+
+i := 3
+var p *int = &3
+p2 := p
+*p2 = 4
+fmt.Println(*p)
+// 4
+
+x := make(chan int)
+y := x
+y <- 2
+go func() {
+    y <- 2 // 고루틴이기 때문에 병렬로 실행됨
+}()
+fmt.Println(<-x)
+// 2
+
+xx := []int{1, 2, 3, 4, 5}
+xy := xx
+xy[3] = 100
+fmt.Println(xx)
+// [1 2 3 100 5]
+```
+
+
+```go
+a := [...]{1,2,3,4}
+b := a
+b[0] = 100
+fmt.Println(a)
+// [1 2 3 4]
+```
+
+* map, slice, channel, pointer는 reference type으로 함수의 인자로 넣거나 대입 시 자신에 대한 reference를 반환 (내부적으로는 pointer를 사용한다고 함)
+  - go에서는 dereference 시 `*` deference operator를 필요하지 않다 -> syntatic sugar 지원
+
 
 #### golang의 runtime 메모리 관리
 
