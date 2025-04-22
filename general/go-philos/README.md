@@ -4,10 +4,6 @@
 
 ### 일반 원칙
 
-> When Go was designed, Java and C++ were the most commonly used languages for writing servers, at least at Google. We felt that these languages required too much bookkeeping and repetition. Some programmers reacted by moving towards more dynamic, fluid languages like Python, at the cost of efficiency and type safety. We felt it should be possible to have the efficiency, the safety, and the fluidity in a single language.  
-Go attempts to reduce the amount of typing in both senses of the word. Throughout its design, we have tried to reduce clutter and complexity. There are no forward declarations and no header files; everything is declared exactly once. Initialization is expressive, automatic, and easy to use. Syntax is clean and light on keywords. Repetition (foo.Foo* myFoo = new(foo.Foo)) is reduced by simple type derivation using the := declare-and-initialize construct. And perhaps most radically, there is no type hierarchy: types just are, they don’t have to announce their relationships. These simplifications allow Go to be expressive yet comprehensible without sacrificing productivity.  
-Another important principle is to keep the concepts orthogonal. Methods can be implemented for any type; structures represent data while interfaces represent abstraction; and so on. Orthogonality makes it easier to understand what happens when things combine.
-
 Go를 디자인할 때, 적어도 구글에서는 Java와 C++가 서버를 작성할 때 가장 많이 사용되는 언어였다. 우리는 이 언어는 bookkeeping(부기)와 반복이 너무 많이 필요하다고 느꼈다. 이에 대해 일부 프로그래머는 효율성과 타입 안정성을 포기하며 동적이고 유동적인 파이썬 같은 언어로 옮겨가는 식으로 대응했다. **우리는 한 언어가 효율성, 안정성, 유동성을 모두 겸비할 수 있으면 했다.**
 
 Go는 이 모두를 위해 타이핑의 양을 줄이려고 시도한다. Go의 디자인 내내 복잡함과 불필요한 코드를 덜어내려 애썼다. forward declaration을 없애려 했고 헤더 파일도 없다. 모든 것은 한 번에 선언된다. 초기화는 표현이 풍부하고 자동적이며 사용하기 쉽다. 문법은 깔끔하고 언어의 키워드가 가볍다. `(foo.Foo* myFoo = new(foo.Foo))`같은 반복은 `:=` 의 사용으로 단순하게 하려 했다. 가장 급진적으로는, 타입 위계가 없다. 그 본인일 뿐이며, 관계를 표현하지 않아도 된다. 이 단순함이 Go가 표현이 풍부하면서도 이해가 쉽고 생산성을 높일 수 있게 한다.
@@ -342,10 +338,6 @@ func main() {
 
 
 ### docs 
-
-> Why build concurrency on the ideas of CSP?
-Concurrency and multi-threaded programming have over time developed a reputation for difficulty. We believe this is due partly to complex designs such as pthreads and partly to overemphasis on low-level details such as mutexes, condition variables, and memory barriers. Higher-level interfaces enable much simpler code, even if there are still mutexes and such under the covers.  
-One of the most successful models for providing high-level linguistic support for concurrency comes from Hoare’s Communicating Sequential Processes, or CSP. Occam and Erlang are two well known languages that stem from CSP. Go’s concurrency primitives derive from a different part of the family tree whose main contribution is the powerful notion of channels as first class objects. Experience with several earlier languages has shown that the CSP model fits well into a procedural language framework.
 
 동시성과 멀티 스레드는 어려움으로 악명이 높았다. 이는 부분적으로 pthread의 복잡한 디자인과 뮤텍스, 조건 변수, 메모리 장벽에 대한 지나친 강조 때문이라고 생각한다. 고수준 인터페이스는 저수준에 뮤텍스 등을 두면서도 훨씬 단순한 코드를 가능케 한다.
 
