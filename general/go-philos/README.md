@@ -402,7 +402,9 @@ golang의 언어적 메모리 모델
 ![golang-process-model](go-style-memory.webp)
 
 * **goroutine 하나마다 하나의 스택**
-* heap에서 메모리를 대여하여 stack의 크기를 동적으로 변경할 수 있음. 이를 통해 수만개의 goroutine을 실행 가능케한다.
+  - goroutine당 2KB의 스택을 할당하며 필요에 따라 grow, shrink 한다.
+    * 보통의 경우 2KB도 충분히 크다. 
+* heap에서 메모리를 대여하여 stack의 크기를 동적으로 변경할 수 있음. 그래서 수만 개의 goroutine을 동시 실행 가능하다. (**goroutines are lightweight threads!**)
 * 물론 이는 POSIX 프로세스 메모리 구조 위에서 동작하는 언어 차원의 메모리 동작 구조(like JVM)
 
 
