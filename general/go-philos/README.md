@@ -59,7 +59,6 @@ function foo() {
   * hoisting: 런타임 시 자동으로 적용
 
 
-
 ### Go 언어에서 exception이 없는 이유
 
 Exception을 try - catch - finally와 같은 제어 구조체(control structure)에 결합하는 건 코드를 난해하게 만든다고 믿는다. 이는 또한 프로그래머가 파일이 안 열리는 경우가 같이 흔히 발생할 수 있는 에러를 예외적이라고 규정하게 한다고 생각한다.
@@ -67,19 +66,6 @@ Exception을 try - catch - finally와 같은 제어 구조체(control structure)
 Go는 다른 접근법을 취한다. 일반 에러 핸들링은 Go의 multi-value을 하고, 이는 리턴값을 overload하지 않으며 에러를 report할 수 있게 한다. Go의 다른 기능과 결합된 일반적인 형태(canonical)의 error 타입이 있어 에러 핸들링을 즐겁게 하면서도 다른 언어와 다르게 한다.
 
 Go는 동시에 프로그램에 크리티컬한 예외 상황을 signal하고 recover하는 built-in 기능도 있다. recovery 메카니즘은 함수의 상태가 에러로 무너지는 일부분으로 실행된다. 이는 재해에 가까운 예외를 다루기 충분하면서도 별도의 control structure가 필요없으며, 잘 쓰이면 깔끔한 에러 핸들링 코드를 작성하는 데 도움이 된다. 
-
-#### 다른 언어와 차이
-
-python 등 주요 언어와 달리 try - catch 구문이 없다. 이때의 특징 (thx. GPT)
-
-| 특징 | Go의 에러 처리 (명시적 반환) | 예외 처리 (try/catch) |
-|---|---|---|
-| 에러 처리 흐름 | 명시적으로 error 반환 후, 호출자에서 처리 | 예외 발생 시 자동으로 흐름 변경 |
-| 장점 | 에러가 숨겨지지 않음, 성능 효율적, 제어 흐름 명확(다른 곳으로 튀어가지 않음) | 코드 간결함, 에러 처리 코드 분리 |
-| 단점 | 에러 처리 코드 반복, 에러 타입이 단순(에러 타입 시 코드가 복잡해짐. 관련 syntatic sugar가 없음), 일관성 부족 | 예외가 숨겨질 수 있음(try 블락의 어떤 코드에서 어떤 에러가 발생할지, 에러가 묻힐지 추적하기 어려울 수 있음), 성능 오버헤드(많은 언어에서 에러 핸들링을 위한 런타임 메커니즘이 내장되어 있고 비쌈. ex. stack unwinding) |
-| 에러 타입 | 단순한 값 (error 인터페이스) | 예외 객체 (다양한 속성 제공) |
-| 제어 흐름 | 명시적, 코드 흐름 내에서 처리 | 예외 발생 시 흐름이 자동 변경 |
-
 
 #### Go의 에러에 대해
 
@@ -90,6 +76,28 @@ type error interface {
     Error() string
 }
 ```
+
+타 언어는 명시적인 Exception 클래스 또는 객체를 지원함
+```python
+try:
+    1 / 0
+except Exception:
+    print("You shall not defy fate")
+```
+
+#### 다른 언어와 차이
+
+python 등 주요 언어와 달리 try - catch 구문이 없다. 이때의 특징 (thx. GPT)
+
+| 특징 | Go의 에러 처리 (명시적 반환) | 예외 처리 (try/catch) |
+|---|---|---|
+| 에러 처리 흐름 | 명시적으로 error 반환 후, 호출자에서 처리 | 예외 발생 시 자동으로 흐름 변경 |
+| 장점 | 에러가 숨겨지지 않음, 성능 효율적, 제어 흐름 명확(다른 곳으로 튀어가지 않음) | 코드 간결함, 에러 처리 코드 분리 |
+| 단점 | 에러 처리 코드 반복, 에러 타입이 단순(에러를 구체적으로 확인해야 할 때 코드가 복잡해짐. 관련 syntatic sugar가 없음), 일관성 부족 | 예외가 숨겨질 수 있음(try 블락의 어떤 코드에서 어떤 에러가 발생할지, 에러가 묻힐지 추적하기 어려울 수 있음), 성능 오버헤드(많은 언어에서 에러 핸들링을 위한 런타임 메커니즘이 내장되어 있고 비쌈. ex. stack unwinding) |
+| 에러 타입 | 단순한 값 (error 인터페이스) | 예외 객체 (다양한 속성 제공) |
+| 제어 흐름 | 명시적, 코드 흐름 내에서 처리 | 예외 발생 시 흐름이 자동 변경 |
+
+
 error는 인터페이스 타입이며, `Error()`를 구현한 모든 것은 error가 된다. error 타입은 built-in이며, `universe block`에 `predeclared`되어 있다.
 
 #### 에러가 단순한 값일 때 이런 어려움이 있을 수 있을까요?
@@ -184,7 +192,6 @@ func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
         http.Error(w, e.Message, e.Code)
     }
 }
-
 
 func init() {
     http.Handle("/view", appHandler(viewRecord))
