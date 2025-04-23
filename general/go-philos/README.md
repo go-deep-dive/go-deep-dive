@@ -444,11 +444,36 @@ xy := xx
 xy[3] = 100
 fmt.Println(xx)
 // [1 2 3 100 5]
+
+
+// closure
+func makeCounter() func() int {
+	count := 0
+	return func() int {
+		count++
+		return count
+	}
+}
+
+func main() {
+	counter1 := makeCounter()
+	counter2 := counter1 // 함수 복사가 아니라 참조만 복사됨
+
+	fmt.Println(counter1()) // 1
+	fmt.Println(counter1()) // 2
+	fmt.Println(counter2()) // 3 ← counter1, counter2는 같은 함수 참조
+}
 ```
 
-* map, slice, channel, pointer는 reference type으로 함수의 인자로 넣거나 대입 시 자신에 대한 reference를 반환 (내부적으로는 pointer를 사용한다고 함)
-  - go에서는 dereference 시 `*` deference operator를 필요하지 않다 -> syntatic sugar 지원
+#### value vs reference
+* https://go.dev/ref/spec#Representation_of_values
 
+| 필드 | value types | reference types | 비고 |
+|-------|-------|-------|------|
+| type 종류 | reference가 아닌 모든 type | pointer, map, channel, slice, function | . |
+| 저장되는 값 | 값 그 자체 | 내부 자료구조에 대한 참조 | . |
+| 특징을 서술하는 단어 | self-contained: 그 자체가 값이며, 참조 등 간접적 객체가 아님 | not self-contained | . |
+| 복사 시 | 복사 시 독립적인, 다른 객체 생성 | 데이터를 가리키는 주소가 복사되어 데이터는 공유 | . |
 
 ### golang의 runtime 메모리 관리
 
