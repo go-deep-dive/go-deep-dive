@@ -67,6 +67,71 @@ Go는 다른 접근법을 취한다. 일반 에러 핸들링은 Go의 multi-valu
 
 Go는 동시에 프로그램에 크리티컬한 예외 상황을 signal하고 recover하는 built-in 기능도 있다. recovery 메카니즘은 함수의 상태가 에러로 무너지는 일부분으로 실행된다. 이는 재해에 가까운 예외를 다루기 충분하면서도 별도의 control structure가 필요없으며, 잘 쓰이면 깔끔한 에러 핸들링 코드를 작성하는 데 도움이 된다. 
 
+#### panic, recover 예제
+
+panic, recover의 정의
+```go
+func panic(interface{}) 
+func recover() interface{}
+```
+* panic에 어떤 객체든 넣을 수 있다.
+* recover는 값의 타입이 경우에 따라 다르다.
+
+panic, recover 예제
+```go
+/* 
+panic 예제 by Tucker go
+
+panic 전파(propagate) & recover
+main -> f -> g -> h
+h에서 panic 발생
+
+recover를 만날 때까지 위로 올라가며 recover를 만나면 처리 후 이어간다
+*/
+package main
+
+import "fmt"
+
+func f() {
+    fmt.Println("f() 함수 시작")
+    defer func() {
+        if r := recover(); r != nil {
+            fmt.Println("panic 복구 -", r)
+        }
+    }()
+
+    g()
+    fmt.Println("f() 함수 끝")
+}
+
+func g() {
+    fmt.Printf("9 / 3 = %d\n", h(9, 3))
+    fmt.Printf("9 / 0 = %d\n", h(9, 0))
+}
+
+func h(a, b int) int {
+    if b == 0 {
+        panic("0으로 나누는 진리의 문은 없습니다")
+    }
+    return a / b
+}
+
+func main() {
+    f()
+    fmt.Println("프로그램이 계속 실행됨")
+}
+
+f() 함수 시작
+9 / 3 = 3
+panic 복구 - 0으로 나누는 진리의 문은 없습니다
+프로그램이 계속 실행됨
+```
+
+개인적으로 흥미로운 점
+* 파이썬 등 언어에서는 예상 못한 모든 상황을 Exception으로 퉁치는데, go에서는 일반적인 error와 크리티컬한 panic을 구분하는 게 신기
+* 파이썬 에러 핸들링에서도 고민하던 내용인데, 함수가 깊게 연쇄될 때 panic을  catch하는 쪽은 어디여야 할까? 
+
+
 #### Go의 에러에 대해
 
 **go의 에러는 내장된 interface**
