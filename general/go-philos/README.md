@@ -385,7 +385,7 @@ fmt.Println(xx)
   - go에서는 dereference 시 `*` deference operator를 필요하지 않다 -> syntatic sugar 지원
 
 
-#### golang의 runtime 메모리 관리
+### golang의 runtime 메모리 관리
 
 POSIX의 프로세스 메모리 자료구조는 일반적으로 다음과 같다:
 ![classical-process-memory-structure](classical.webp)
@@ -406,6 +406,13 @@ golang의 언어적 메모리 모델
     * 보통의 경우 2KB도 충분히 크다. 
 * heap에서 메모리를 대여하여 stack의 크기를 동적으로 변경할 수 있음. 그래서 수만 개의 goroutine을 동시 실행 가능하다. (**goroutines are lightweight threads!**)
 * 물론 이는 POSIX 프로세스 메모리 구조 위에서 동작하는 언어 차원의 메모리 동작 구조(like JVM)
+
+### Why goroutines instead of threads?
+* 중요하다고 생각해서 번역해서 가져왔습니다.
+
+goroutine은 concurrency를 사용하기 쉽게 한다. concurrency를 위한 발상은 원래 thread 집합에 독립적으로 실행 중인 다수의 coroutine을 thread 집합에 multiplexing 하려고 했다. coroutine이 block되면 런타임이 자동으로 같은 운영체제 스레드의 다른 coroutine을 실행 가능한 다른 스레드로 옮겨 블락되지 않게 하는 것이다. 프로그래머는 이를 알지 못하고, 이게 주요 포인트였다. 결과적으로 탄생한 **goroutine은 단지 수 바이트로 매우 저렴해서 스택의 메모리 공간에서 overhead가 없다.**
+
+**전체 스택을 작게 하기 위해 go 런타임은 크기 조정 가능하지만 상한은 있는(bounded) 스택을 사용한다.** 막 생성된 goroutine은 몇 바이트만 제공되는데, 대부분 이 정도면 충분하다. 충분하지 않을 경우 늘린다. 결과 적당한 메모리로 매우 많은 goroutine을 생성할 수 있다. **함수 호출마다의 CPU overhead는 함수마다 3개의 저렴한 instruction 정도가 평균이다. 같은 메모리 주소(하나의 프로세스, 프로그램)에서 수십만 개의 goroutine을 생선하는 게 무리가 아닌, 실용적이다.(practical)** goroutine이 단순 OS thread였다면 훨씬 적은 수의 스레드로 시스템 자원이 고갈됐을 것이다.
 
 
 ### 참고
