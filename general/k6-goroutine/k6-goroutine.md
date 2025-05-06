@@ -1,4 +1,4 @@
-# K6 구조를 통해 배우는 부하 시뮬레이션, 메트릭 수집 파이프라인 설계
+# K6를 통해 배우는 Goroutine과 Multi-threading의 차이
 
 ---
 
@@ -8,23 +8,23 @@ K6는 **Go 언어로 개발된 부하 테스트 및 성능 테스트 도구**로
 
 * 시나리오는 JavaScript로 작성하며, CLI를 통해 실행합니다.
 * 수천에서 수십만 개의 Virtual User(VU)를 고루틴으로 시뮬레이션할 수 있습니다.
-* 내부적으로 JS 런타임으로 **goja**를 사용합니다.
+* 내부적으로 JS 런타임으로 goja를 사용합니다.
 
 ### 구조 개요
 
 ```text
 +------------------+
-|   CLI Entry      | --> cmd/k6/main.go
+|   CLI Entry      | --> main.go
 +------------------+
          |
          v
-+-----------------------+
-|  Engine (core.Engine) |
-+-----------------------+
++-------------------------+
+|     Executor & VU Pool  | --> lib/executor/
++-------------------------+
          |
          v
 +----------------------------+
-| JS Runtime (goja Runner)   |
+| JS Runtime (goja Runner)   | --> js/
 +----------------------------+
          |
          v
@@ -33,9 +33,17 @@ K6는 **Go 언어로 개발된 부하 테스트 및 성능 테스트 도구**로
 +----------------------+
 ```
 
-### 예시 시나리오 (script.js)
+❓**고루틴 생성 이전에 JS 런타임을 단 한 번 실행할 수는 없는가**
+   - 각각의 VU 고루틴이 자체적으로 JS 런타임 인스턴스를 생성하여 코드를 실행함으로써, 독립적인 실행 환경을 가지고 상태 격리를 이룰 수 있음
+   - 또한, 각각의 고루틴이 런타임 인스턴스를 지니더라도 Go의 GC를 통해 메모리 효율성을 확보할 수 있으므로 크게 문제가 되지 않음
+   - 따라서, VU 고루틴이 각각 JS 런타임을 실행하여 시나리오를 파싱한 데이터를 들고 있음
+
+### 예시 시나리오와 결과
 
 ```js
+// 예시 시나리오
+// 10명의 VU를 30초 동안 HTTP GET 요청을 보내고,
+// 응답 상태가 200인지 확인 후 1초씩 대기하는 시나리오
 import http from 'k6/http';
 import { sleep, check } from 'k6';
 
@@ -54,7 +62,23 @@ export default function () {
 ```
 
 ```bash
+// 실행
 k6 run script.js
+```
+
+```text
+// 예시 결과
+running (30.0s), 10/10 VUs, 300 complete and 0 interrupted iterations
+default ✓ [======================================] 10 VUs  30s
+
+     data_received........: 1.2 MB  40 kB/s
+     data_sent............: 0.5 MB  17 kB/s
+     http_req_duration....: avg=120ms min=100ms max=150ms p(95)=140ms p(99)=145ms
+     http_reqs............: 300    10.0/s
+     iteration_duration...: avg=1.12s min=1.1s  max=1.2s
+     iterations...........: 300    10.0/s
+     vus..................: 10     min=10  max=10
+     vus_max..............: 10     min=10  max=10
 ```
 
 ### 주요 기능 요약
@@ -63,33 +87,36 @@ k6 run script.js
 | ------------- | --------------------------------- |
 | HTTP 요청 지원    | GET, POST, PUT, DELETE 등          |
 | WebSocket 테스트 | 실시간 서비스 테스트 가능                    |
-| Thresholds    | SLA 조건 정의 가능                      |
+| Thresholds    | SLA (Service Level Agreement) 조건 정의 가능                      |
 | Checks        | Assertion 기능 제공                   |
 | Metrics 출력    | JSON, InfluxDB, Prometheus 등으로 출력 |
 | Cloud 실행      | Grafana Cloud 확장 가능               |
 
 ---
 
-## 2. K6 내부 구조 및 폴더 설명
+## 2. K6 내부 구조 및 폴더 설명 ( v1.0.0 기준 )
 
 ```text
 k6/
-├── core/        # 실행기, 스케줄러, 샘플러 등 핵심 로직
-├── js/          # JavaScript 런타임 연동(goja)
-├── lib/         # HTTP, WS 등 라이브러리 모듈
-├── stats/       # 통계 수집 및 집계
-├── cmd/         # CLI 명령 처리
-├── ui/          # CLI 출력, 진척도 바 등
-├── config/      # 설정 처리
-└── modules/     # JS import 가능한 모듈들
+├── cmd/           # CLI 명령 처리
+├── js/            # JavaScript 런타임 연동 (goja)
+├── lib/           # HTTP, WebSocket 등 라이브러리 모듈
+├── metrics/       # 메트릭 수집 및 처리
+├── internal/      # 내부 구현 세부사항
+└── main.go        # 프로그램 진입점
 ```
 
 진입점:
 
 ```go
+package main
+
+import (
+    "go.k6.io/k6/cmd"
+)
+
 func main() {
-    rootCmd := commands.NewRootCommand()
-    rootCmd.Execute()
+    cmd.Execute()
 }
 ```
 
@@ -99,34 +126,28 @@ func main() {
 
 ### 1) JavaScript 스크립트 파싱
 
-* 위치: `js/runner.go`, `modules/`
+* 위치: `js/modules/`
 * goja 엔진을 통해 JavaScript 파싱 및 실행
 * JS의 함수(`http.get`, `sleep`, `check`)는 Go로 구현된 모듈과 연결
 
 ### 2) VU(Virtual User) 생성 및 실행
 
-* 위치: `core/engine.go`, `core/local`, `core/execution_plan.go`
+* 위치: `lib/executor/`
 * 각 VU는 고루틴으로 실행되며, 루프 안에서 JS를 반복 실행
-* 각 실행은 `vu.RunLoop()`를 통해 수행됨
+* 각 실행은 `vu.Run()`를 통해 수행됨
 
 ```go
-func (vu *VU) RunLoop(ctx context.Context) {
-    go func() {
-        for {
-            select {
-            case <-ctx.Done():
-                return
-            default:
-                vu.RunOnce()
-            }
-        }
-    }()
+func (e *Executor) Run() {
+  for i := 0; i < e.options.VUs; i++ {
+    vu := NewVU(i)
+    go vu.Run()
+  }
 }
 ```
 
 ### 3) Metrics 수집
 
-* 위치: `stats/engine.go`, `stats/metrics.go`
+* 위치: `metrics/`
 * 각 VU는 실행 결과를 `stats.Sample`로 생성 후 채널을 통해 전달
 
 ```go
@@ -200,18 +221,7 @@ RunOnce → Sample → 채널 → Stats Engine → CLI/DB 출력
 
 ---
 
-## 7. 참고 코드 위치 (K6 GitHub)
-
-| 기능         | 파일 위치                                    |
-| ---------- | ---------------------------------------- |
-| VU 실행 및 루프 | `core/engine.go`, `lib/executor`         |
-| Sample 생성  | `lib/netext/transport.go`                |
-| Sample 전송  | `lib/metrics/metrics.go`                 |
-| Stats 처리   | `stats/engine.go`, `stats/aggregator.go` |
-
----
-
-## 8. Go의 고루틴이 쓰레드보다 유리한 이유
+## 7. Go의 고루틴이 쓰레드보다 유리한 이유
 
 * **낮은 환경 의존성**: 스레드는 OS 리소스에 민감하지만 고루틴은 경량
 * **간단한 동시성 구현**: Context Switch가 사용자 공간에서 이뤄짐
@@ -220,11 +230,7 @@ RunOnce → Sample → 채널 → Stats Engine → CLI/DB 출력
 
 ### GMP 모델
 
-<image src="./gmp-model.png">
-
-```text
-G (Goroutine) → P (Processor) → M (OS Thread)
-```
+<image src="./gmp-model.png" width="500px">
 
 * Go는 G들을 P가 스케줄링하고 M에 분배하여 실행
 * 사용자 공간에서 스케줄링 → 매우 빠른 문맥 전환
@@ -232,3 +238,20 @@ G (Goroutine) → P (Processor) → M (OS Thread)
 📌 **스레드는 버스를 몰아야 하는 기사, 고루틴은 자전거**
 
 수백 명이 자전거를 타고 가는 구조가 더 유연하고 빠릅니다.
+
+---
+
+## 8. 참고 코드 위치 (K6 GitHub)
+
+| 기능         | 파일 위치                                    |
+| ---------- | ---------------------------------------- |
+| VU 실행 및 루프 | `lib/executor/vu_handle.go`<br> vuHandle.runLoopsIfPossible() 함수에서 VU의 반복 실행 로직을 처리합니다.        |
+| Sample 생성  | `lib/netext/httpext/transport.go`<br> HTTP 요청의 RoundTrip 과정에서 메트릭 샘플을 생성합니다.                |
+| Sample 전송  | `metrics/sample.go`<br> Sample 구조체와 관련된 메트릭 샘플의 정의와 처리를 담당합니다.                 |
+| Stats 처리   | `internal/metrics/engine/`<br> 테스트 실행 중 수집된 메트릭을 집계하고 처리하는 로직이 포함되어 있습니다. |
+
+---
+
+### References
+
+- https://github.com/grafana/k6
