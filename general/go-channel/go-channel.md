@@ -356,6 +356,22 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
         gopark(nil, nil, waitReasonChanReceiveNilChan, traceBlockForever, 2)
     }
 
+    // Fast path: 논블로킹 모드인데 채널이 비워있는 경우, 고성능을 위해 즉시 리턴
+    if !block && empty(c) {
+		if atomic.Load(&c.closed) == 0 {
+			return
+		}
+		if empty(c) {
+			if raceenabled {
+				raceacquire(c.raceaddr())
+			}
+			if ep != nil {
+				typedmemclr(c.elemtype, ep)
+			}
+			return true, false
+		}
+    }
+
     if sg := c.sendq.dequeue(); sg != nil {
         // 송신자가 대기 중이면 직접 값 복사 후, 송신자 깨움
         // 버퍼 사이즈가 0인 경우, 수신자가 받을 때까지 송신자는 블락되기 때문에 goready를 통해 깨워주는 작업이 필요
