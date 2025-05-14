@@ -2,7 +2,7 @@
 
 우선 채널이란? 고루틴 간에 데이터를 안전하게 주고받기 위한 파이프라인
 
-![image](https://github.com/user-attachments/assets/4d1b7048-f4a0-4ac5-b92a-2a3dfb78947a)
+![image](channel.png)
 
 Golang이 가장 큰 장점인 '동시성'을 제대로 활용하기 위해서는, 채널이라는 개념을 잘 이해하는 것이 중요!
 
@@ -151,7 +151,7 @@ class Counter {
 ### 송신/수신 블로킹 조건
 * **unbuffered**: 수신자가 없으면 송신자는 블록됨 (반대도 동일)
 * **buffered**: 버퍼가 가득 차면 송신자 블록됨, 비어 있으면 수신자 블록됨
- ![image](https://github.com/user-attachments/assets/ac6f5d86-6b16-4f7b-ac0e-b69ca5631780)
+ ![image](channel%20behaviors.png)
 
 ### `select` 문
 ```go
@@ -211,7 +211,7 @@ type sudog struct {
 
 ```
 
-![image](https://github.com/user-attachments/assets/a3e50be3-e6c9-4dd9-ae51-22189e17a0c4)
+![image](queue_list.png)
 
 * (송/수신) 큐에는 큐의 첫번째와 맨 마지막 고루틴 정보만 저장해두고 있음
 * 고루틴 구조체(sudog)는 prev, next 고루틴을 가진 **양방향 연결리스트** 형태로 구현되어 있음
@@ -356,7 +356,7 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
 
 
 ## 4. Go 런타임 스케줄러
-![image](https://github.com/user-attachments/assets/d7adb676-dc62-4c3c-9cc1-7814a0125ea1)
+![image](go_runtime_scheduler.png)
 
 * Go에서 고루틴은 Go 런타임 스케줄러가 관리하는 **사용자 공간** 스레드
 * 운영 체제 스레드와 달리 고루틴의 수명 주기는 운영 체제 자체가 아닌 **Go 런타임에서 관리** 
@@ -368,16 +368,12 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
 * 이를 통해 스레드가 아닌 고루틴 자체를 컨텍스트 스위칭하여 병렬 처리를 효율적으로 지원할 수 있게 됨
 
 
-![image](https://github.com/user-attachments/assets/1009a20d-850b-4256-a8d6-405339c522bb)
+![image](GMP.png)
 
 Go schedular에는 세 가지 구조가 존재합니다.
 * M은 운영체제 자체에서 관리하는 OS 스레드
 * G는 크기 조절이 가능한 스택인 고루틴
 * P는 스케줄링을 위한 컨텍스트를 나타내며 Go 코드 실행을 담당하며, 실행 가능한 고루틴의 큐를 포함하고 있음 (스케쥴링 담당 주체)
-
-
-#### 고루틴 수행 시점 GMP 구조 
-![image](https://github.com/user-attachments/assets/f7799a75-2988-4d86-8534-081c650f2534)
 
 ---
 
