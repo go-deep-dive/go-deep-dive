@@ -408,6 +408,7 @@ Go schedular에는 세 가지 구조가 존재합니다.
 
 
 ![image](goroutine_waiting.png)
+
 gopark()시 스케줄러 레벨에서 **대기** 상태로 전환될 때 GMP 모습
 ```go
 // runtime/proc.go
@@ -438,7 +439,7 @@ func goready(g *g, traceskip int) {
 ### 데드락 발생
 
 ```go
-ch := make(chan int)
+ch := make(chan int)  // 언버퍼드 채널의 경우
 ch <- 1  // 수신자가 없어 데드락 발생
 fmt.Println(<-ch) // 실행 X
 ```
