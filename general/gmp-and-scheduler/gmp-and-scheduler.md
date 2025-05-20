@@ -444,6 +444,7 @@ func main() {
 
 ### heap profile
 ![](image-7.png)
+
 `net/http.(*Transport).getConn`
 - 내부적으로 HTTP connection pool을 관리하면서, 새로운 연결을 만들거나 재사용하는 함수
 - connection을 재사용하지 못함 → 계속 dial → new FD → getConn → heap 사용 증가
@@ -456,6 +457,7 @@ func main() {
 
 ### cpu profile
 ![](image-9.png)
+
 `runtime.cgocall`
 - Go에서 C 코드 또는 시스템 호출 (syscall) 을 실행할 때 사용되는 내부 함수
 - 수많은 고루틴이 동시에 `http.Client.Get()`을 호출 → 각 요청마다 새로운 연결을 시도 → 네트워크 syscall 폭주
