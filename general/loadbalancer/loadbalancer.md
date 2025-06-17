@@ -737,7 +737,7 @@ Traefik을 사용하면 IP, Port가 바뀌어도 자동으로 인식하고 반�
 Traefik은 Kubernetes API Server와 통신하여 리소스들을 실시간으로 관찰하는 데, 이런 부분은 추가로 반영해볼만 할 것 같다.
 
 ## 참고자료
-
+- [위 코드를 확인할 수 있는 repo](https://github.com/chaewonkong/loadigo)
 - [Creating a Load Balancer in GO](https://medium.com/@leonardo5621_66451/building-a-load-balancer-in-go-1c68131dc0ef)
 - [Golang Load Balancer](https://github.com/leonardo5621/golang-load-balancer)
 - [Traefik Docs](https://doc.traefik.io/traefik/)
