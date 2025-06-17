@@ -5,6 +5,16 @@
 ## 로드 밸런서
 로드 밸런서(Load Balancer)는 여러 대의 서버 간에 클라이언트 요청을 고르게 분산하는 역할을 한다. 트래픽 과부하를 방지하고 가용성, 성능을 향상시킨다.
 
+```mermaid
+flowchart TD
+    C[Client Requests] --> LB[Load Balancer]
+    LB --> S1[Backend Server 1]
+    LB --> S2[Backend Server 2]
+    LB --> S3[Backend Server 3]
+    classDef lb fill:#DDF,stroke:#333,stroke-width:2px;
+    class LB lb;
+```
+
 ### 목적
 - 부하 분산
 - 고가용성 (장애시 대체 서버로 우회)
