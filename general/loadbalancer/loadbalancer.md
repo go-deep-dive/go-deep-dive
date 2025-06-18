@@ -685,7 +685,7 @@ func (lb *loadBalancer) nextServer() http.Handler {
 
 	// Ensure b1 and b2 are different
 	if i == j {
-		i = (j + 1) % len(healthy)
+		j = (j + 1) % len(healthy)
 	}
 
 	b1, b2 := healthy[i], healthy[j]
